@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>TapTrail – Alba dei Marsi Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Fonts: Bebas Neue per i titoli e Roboto per i testi -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:400,700&display=swap" rel="stylesheet">
+  <style>
+    /* Reset di base */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(to bottom, #e0eafc, #cfdef3);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    /* Header fisso con logo e informazioni */
+    #header {
+      width: 100%;
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      padding: 15px 0;
+      position: fixed;
+      top: 0;
+      z-index: 100;
+    }
+    #header #logo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 36px;
+      margin-bottom: 5px;
+    }
+    .header-info {
+      font-size: 18px;
+    }
+    
+    /* Schermata di selezione */
+    #selectionScreen {
+      margin-top: 100px;
+      width: 90%;
+      max-width: 500px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    label, select {
+      font-size: 18px;
+    }
+    select {
+      padding: 8px;
+      margin: 10px 0;
+      width: 80%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #ff4d4d;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .button:hover {
+      background-color: #e04343;
+    }
+    
+    /* Area di gioco */
+    #gameContainer {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 150px;
+      width: 100%;
+    }
+    canvas {
+      background: #fff;
+      border: 2px solid #ccc;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      border-radius: 8px;
+    }
+    #feedback {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header con logo, timer ed energia -->
+  <div id="header">
+    <div id="logo">Alba dei Marsi</div>
+    <div class="header-info" id="timer">Tempo: 00:00</div>
+    <div class="header-info" id="energy">Energia: 100%</div>
+  </div>
+  
+  <!-- Schermata di selezione avatar -->
+  <div id="selectionScreen">
+    <h1>TapTrail – Alba dei Marsi Challenge</h1>
+    <div>
+      <label for="genderSelect">Seleziona Corridore:</label>
+      <select id="genderSelect">
+        <option value="male">Uomo</option>
+        <option value="female">Donna</option>
+      </select>
+    </div>
+    <div>
+      <label for="jerseySelect">Seleziona colore canotta:</label>
+      <select id="jerseySelect">
+        <option value="red">Rossa</option>
+        <option value="blue">Blu</option>
+        <option value="yellow">Gialla</option>
+        <option value="white">Bianca</option>
+        <option value="green">Verde</option>
+      </select>
+    </div>
+    <button id="startButton" class="button">Inizia la Corsa</button>
+  </div>
+  
+  <!-- Area di gioco -->
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="feedback"></div>
+  </div>
+  
+  <script>
+    // Riferimenti agli elementi
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const timerElement = document.getElementById('timer');
+    const energyElement = document.getElementById('energy');
+    const feedbackElement = document.getElementById('feedback');
+    
+    // Stato di gioco
+    let gameStarted = false;
+    let startTime;
+    let elapsedTime = 0; // in secondi
+    let energy = 100;    // da 0 a 100%
+    let distance = 0;    // avanzamento (0-100% del percorso)
+    let lastTapTime = Date.now();
+    
+    // Impostazioni del percorso: segmenti con tipologia (salita, pianura, discesa)
+    const totalDistance = 100;
+    const courseSegments = [
+      { type: "salita", start: 0, end: 20 },
+      { type: "pianura", start: 20, end: 60 },
+      { type: "discesa", start: 60, end: 80 },
+      { type: "salita", start: 80, end: 100 }
+    ];
+    
+    // Creiamo un profilo altimetrico
+    const altitudes = [];
+    for (let i = 0; i <= totalDistance; i++) {
+      if (i < 20) {
+        altitudes.push(i * 3);
+      } else if (i < 60) {
+        altitudes.push(60);
+      } else if (i < 80) {
+        altitudes.push(60 - (i - 60) * 2);
+      } else {
+        altitudes.push((i - 80) * 2);
+      }
+    }
+    
+    // Impostazioni iniziali dell'avatar (da selezione)
+    let avatar = {
+      gender: "male",
+      jersey: "red"
+    };
+    
+    // Gestione della schermata di selezione
+    document.getElementById('startButton').addEventListener('click', function() {
+      avatar.gender = document.getElementById('genderSelect').value;
+      avatar.jersey = document.getElementById('jerseySelect').value;
+      document.getElementById('selectionScreen').style.display = "none";
+      document.getElementById('gameContainer').style.display = "flex";
+      startGame();
+    });
+    
+    // Aggiornamento del timer
+    function updateTimer() {
+      if (gameStarted) {
+        elapsedTime = (Date.now() - startTime) / 1000;
+        const minutes = Math.floor(elapsedTime / 60);
+        const seconds = Math.floor(elapsedTime % 60);
+        timerElement.textContent =
+          "Tempo: " +
+          (minutes < 10 ? "0" + minutes : minutes) +
+          ":" +
+          (seconds < 10 ? "0" + seconds : seconds);
+      }
+    }
+    
+    // Gestione del tap/click/pointer
+    function handleTap() {
+      if (!gameStarted) return;
+      const currentTime = Date.now();
+      const interval = currentTime - lastTapTime;
+      lastTapTime = currentTime;
+      
+      // Determiniamo il segmento attuale in base alla distanza
+      const segment = courseSegments.find(seg => distance >= seg.start && distance < seg.end);
+      
+      // Parametri di default
+      let targetInterval = 500;      // intervallo ideale in ms
+      let progressIncrement = 0.5;     // incremento base della progressione
+      let energyCost = 0.5;            // costo energetico per tap
+      
+      if (segment) {
+        if (segment.type === "salita") {
+          targetInterval = 300;
+          progressIncrement = 0.7;
+          energyCost = 1;
+        } else if (segment.type === "pianura") {
+          targetInterval = 500;
+          progressIncrement = 0.5;
+          energyCost = 0.5;
+        } else if (segment.type === "discesa") {
+          targetInterval = 700;
+          progressIncrement = 0.3;
+          energyCost = 0.3;
+        }
+      }
+      
+      // Bonus o penalità in funzione del ritmo dei tap
+      if (interval < targetInterval) {
+        progressIncrement *= 1.2;
+        feedbackElement.textContent = "Ottimo ritmo!";
+      } else if (interval > targetInterval * 1.5) {
+        progressIncrement *= 0.8;
+        feedbackElement.textContent = "Ritmo troppo lento!";
+      } else {
+        feedbackElement.textContent = "";
+      }
+      
+      // Aggiorna stato
+      distance += progressIncrement;
+      energy -= energyCost;
+      if (energy < 0) energy = 0;
+      if (distance > totalDistance) distance = totalDistance;
+      
+      energyElement.textContent = "Energia: " + Math.floor(energy) + "%";
+      
+      // Ridisegno del gioco
+      drawGame();
+    }
+    
+    // Avvio del gioco
+    function startGame() {
+      gameStarted = true;
+      startTime = Date.now();
+      lastTapTime = Date.now();
+      feedbackElement.textContent = "Tocca ritmicamente per avanzare!";
+      setInterval(updateTimer, 100);
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Ciclo principale del gioco
+    function gameLoop() {
+      if (gameStarted) {
+        if (distance >= totalDistance) {
+          gameStarted = false;
+          feedbackElement.textContent = "Complimenti! Hai completato il percorso!";
+          alert("Percorso completato in " + timerElement.textContent);
+        } else {
+          requestAnimationFrame(gameLoop);
+        }
+      }
+    }
+    
+    // Disegna la mappa, il profilo altimetrico e il corridore
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const margin = 50;
+      const mapWidth = canvas.width - 2 * margin;
+      const baseY = canvas.height - 100;
+      
+      // Disegno del profilo altimetrico
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i <= totalDistance; i++) {
+        const x = margin + (i / totalDistance) * mapWidth;
+        const y = baseY - altitudes[i];
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+      
+      // Disegno dell'avatar (corridore): rappresentato con un cerchio del colore scelto
+      const runnerX = margin + (distance / totalDistance) * mapWidth;
+      const runnerY = baseY - altitudes[Math.floor(distance)];
+      ctx.fillStyle = avatar.jersey;
+      ctx.beginPath();
+      ctx.arc(runnerX, runnerY, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Indica in alto il tipo di segmento attuale
+      const currentSegment = courseSegments.find(seg => distance >= seg.start && distance < seg.end);
+      if (currentSegment) {
+        ctx.fillStyle = "#333";
+        ctx.font = "20px 'Roboto'";
+        ctx.fillText("Segmento: " + currentSegment.type.toUpperCase(), margin, 40);
+      }
+    }
+    
+    // Gestione degli eventi per dispositivi desktop e mobile
+    function pointerHandler(e) {
+      e.preventDefault();
+      handleTap();
+    }
+    
+    canvas.addEventListener("click", pointerHandler);
+    canvas.addEventListener("touchstart", pointerHandler);
+    canvas.addEventListener("pointerdown", pointerHandler);
+  </script>
+</body>
+</html>
