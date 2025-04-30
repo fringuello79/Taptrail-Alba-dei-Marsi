@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>TapTrail – Alba dei Marsi Challenge</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Google Fonts: Press Start 2P per un look retrò -->
+  <!-- Google Fonts per l'estetica retrò in pixel art -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     /* Reset di base */
@@ -17,11 +17,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding-top: 120px;
     }
     
-    /* Header in stile retrò con logo e informazioni */
+    /* Header in stile retrò con il logo e le informazioni */
     #header {
       width: 100%;
       background-color: #222;
@@ -30,20 +31,22 @@
       position: fixed;
       top: 0;
       z-index: 10;
-      border-bottom: 3px solid #ffea00; /* bordo "pixel art" */
+      border-bottom: 3px solid #ffea00;
     }
-    #header #logo {
-      font-size: 28px;
-      color: #ffea00;
+    /* Contenitore per il logo pixel art – verrà disegnato su canvas */
+    #logoContainer {
+      margin: 0 auto;
+      width: 220px;
+      height: 120px;
     }
+    /* Elementi informativi del header */
     .header-info {
       font-size: 14px;
-      margin-top: 5px;
+      margin-top: 3px;
     }
     
-    /* Schermata di selezione in stile 90's retrò */
+    /* Schermata di selezione in stile anni '90 pixel art */
     #selectionScreen {
-      margin-top: 80px;
       width: 90%;
       max-width: 600px;
       background: #1a1a1a;
@@ -51,6 +54,7 @@
       border: 4px solid #ffea00;
       box-shadow: 4px 4px 0px #ffea00;
       text-align: center;
+      margin-bottom: 20px;
     }
     #selectionScreen h1 {
       font-size: 20px;
@@ -80,36 +84,56 @@
       border: none;
       cursor: pointer;
       box-shadow: 2px 2px 0px #222;
+      margin: 8px;
     }
     .button:hover {
       background-color: #ffd700;
     }
     
-    /* Contenitore di gioco */
+    /* Contenitore di gioco – include la mappa, l'altimetria ecc. */
     #gameContainer {
       display: none;
       flex-direction: column;
       align-items: center;
-      margin-top: 80px;
+      margin-bottom: 20px;
     }
     
     /* Pannello altimetrico in stile pixel art */
-    #altimetryPanel, canvas.altitude {
+    canvas#altimetryCanvas {
       width: 800px;
       height: 100px;
       border: 4px solid #ffea00;
       background: #1a1a1a;
       box-shadow: 4px 4px 0px #ffea00;
-      padding: 5px;
       margin-bottom: 10px;
     }
     
-    /* Canvas principale: mappa del percorso (vista dall'alto) */
+    /* Canvas principale: mappa vista dall'alto */
     canvas#gameCanvas {
       background: #000;
       border: 4px solid #ffea00;
       box-shadow: 4px 4px 0px #ffea00;
       margin-bottom: 10px;
+    }
+    
+    /* Sezione dei pulsanti – home, nuova partita, scoreboard */
+    #controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Area per la scoreboard */
+    #scoreboard {
+      width: 90%;
+      max-width: 600px;
+      background: #1a1a1a;
+      padding: 10px;
+      border: 4px solid #ffea00;
+      box-shadow: 4px 4px 0px #ffea00;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 12px;
     }
     
     #feedback {
@@ -120,9 +144,12 @@
   </style>
 </head>
 <body>
-  <!-- Header fisso -->
+  <!-- Header fisso con logo e informazioni -->
   <div id="header">
-    <div id="logo">Alba dei Marsi</div>
+    <!-- Qui inseriamo il canvas dove viene disegnato il logo pixel art -->
+    <div id="logoContainer">
+      <canvas id="logoCanvas" width="220" height="120"></canvas>
+    </div>
     <div class="header-info" id="timer">Tempo: 00:00</div>
     <div class="header-info" id="energy">Energia: 100%</div>
   </div>
@@ -150,7 +177,7 @@
     <button id="startButton" class="button">Inizia la Corsa</button>
   </div>
   
-  <!-- Contenitore di gioco: altimetria + mappa vista dall'alto -->
+  <!-- Contenitore di gioco -->
   <div id="gameContainer">
     <!-- Pannello altimetrico (vista di profilo) -->
     <canvas id="altimetryCanvas" width="800" height="100"></canvas>
@@ -159,8 +186,29 @@
     <div id="feedback"></div>
   </div>
   
+  <!-- Controlli: pulsanti per tornare alla home, nuova partita e per la scoreboard -->
+  <div id="controls">
+    <button id="homeButton" class="button">Home</button>
+    <button id="newGameButton" class="button">Nuova Partita</button>
+    <button id="scoreButton" class="button">Scoreboard</button>
+  </div>
+  
+  <!-- Area Scoreboard -->
+  <div id="scoreboard" style="display: none;">
+    <h2>Scoreboard</h2>
+    <ol id="scoreList"></ol>
+    <button id="closeScoreButton" class="button">Chiudi Scoreboard</button>
+  </div>
+  
+  <!-- Includi il file logo.js per disegnare il logo pixel art -->
+  <script src="logo.js"></script>
+  <!-- Qui vanno anche il resto degli script (gestione del gioco ecc.) -->
   <script>
-    // Riferimenti agli elementi HTML
+    /////////////////////////////
+    // Codice del Gioco (semplificato)
+    /////////////////////////////
+    
+    // Riferimenti principali
     const gameCanvas = document.getElementById('gameCanvas');
     const gameCtx = gameCanvas.getContext('2d');
     const altCanvas = document.getElementById('altimetryCanvas');
@@ -168,20 +216,28 @@
     const timerElement = document.getElementById('timer');
     const energyElement = document.getElementById('energy');
     const feedbackElement = document.getElementById('feedback');
+    const selectionScreen = document.getElementById('selectionScreen');
+    const gameContainer = document.getElementById('gameContainer');
+    const homeButton = document.getElementById('homeButton');
+    const newGameButton = document.getElementById('newGameButton');
+    const scoreButton = document.getElementById('scoreButton');
+    const scoreboardDiv = document.getElementById('scoreboard');
+    const scoreList = document.getElementById('scoreList');
+    const closeScoreButton = document.getElementById('closeScoreButton');
 
-    // Stato di gioco
+    // Variabili di stato del gioco
     let gameStarted = false;
     let startTime, elapsedTime = 0;
     let energy = 100;
-    let distance = 0; // Avanzamento in percentuale (0-100)
+    let distance = 0; // Avanzamento percentuale (0-100)
     let lastTapTime = Date.now();
-    let bpm = 0; // Calcolato in base ai tap (scala da 1 a 6)
+    let bpm = 0; // livello BPM (scala da 1 a 6)
     let tapIntervals = [];
-    // Variabili per l'animazione semplice del runner
+    // Variabili per animazione runner semplice
     let runnerFrame = 0;
     let runnerAnimationCounter = 0;
 
-    // Impostazioni del percorso (sintetiche, ma che imitano quella tecnica reale)
+    // Impostazioni del percorso (da modellare fedelmente al tracciato reale)
     const totalDistance = 100;
     const courseSegments = [
       { type: "salita", start: 0, end: 20 },
@@ -190,7 +246,7 @@
       { type: "salita", start: 80, end: 100 }
     ];
 
-    // Profilo altimetrico (basato sui dati della traccia reale)
+    // Profilo altimetrico – riproduce esattamente l’andamento con scala in metri
     const altitudes = [];
     for (let i = 0; i <= totalDistance; i++) {
       if (i < 20) {
@@ -210,16 +266,16 @@
       jersey: "red"
     };
 
-    // Gestione schermata d'ingresso
+    // Gestione della schermata iniziale
     document.getElementById('startButton').addEventListener('click', function() {
       avatar.gender = document.getElementById('genderSelect').value;
       avatar.jersey = document.getElementById('jerseySelect').value;
-      document.getElementById('selectionScreen').style.display = "none";
-      document.getElementById('gameContainer').style.display = "flex";
+      selectionScreen.style.display = "none";
+      gameContainer.style.display = "flex";
       startGame();
     });
 
-    // Aggiornamento del timer nel header
+    // Funzione per aggiornare il timer
     function updateTimer() {
       if (gameStarted) {
         elapsedTime = (Date.now() - startTime) / 1000;
@@ -231,7 +287,7 @@
       }
     }
 
-    // Calcolo BPM dai tap su una scala a 6 livelli
+    // Calcoliamo BPM dai tap (scala 1 a 6)
     function calculateBPM(interval) {
       let currentBPM = 60000 / interval;
       if (currentBPM < 80) return 1;
@@ -242,7 +298,7 @@
       return 6;
     }
 
-    // Gestione degli input tramite tap/click/pointer
+    // Gestione del tap (click/touch/pointer)
     function handleTap() {
       if (!gameStarted) return;
       const currentTime = Date.now();
@@ -250,35 +306,33 @@
       lastTapTime = currentTime;
       if (interval === 0) interval = 500;
       let level = calculateBPM(interval);
-      bpm = level; // Salva il livello BPM (1-6)
+      bpm = level;
 
-      // Parametri base per avanzamento ed energia
+      // Parametri base: l'avanzamento ed il consumo energetico verranno modulati
       let progressIncrement = 0.5;
       let energyCost = 0.5;
       let feedbackMessage = "";
       
-      // Modifica in base al segmento corrente
+      // Modulo in base al segmento corrente
       const segment = courseSegments.find(seg => distance >= seg.start && distance < seg.end);
       if (segment) {
-        if (segment.type === "salita") { progressIncrement = 0.7; energyCost = 1; }
+        if (segment.type === "salita") { progressIncrement = 0.7; energyCost = 1.5; }
         else if (segment.type === "pianura") { progressIncrement = 0.5; energyCost = 0.5; }
-        else if (segment.type === "discesa") { progressIncrement = 0.3; energyCost = 0.3; }
+        else if (segment.type === "discesa") { progressIncrement = 0.3; energyCost = 0.2; }
       }
-      // Adatta l'incremento in base al livello BPM: scegli un incremento fluido
-      progressIncrement *= (1 + 0.1 * (level - 1));
+      // Adatta in base al livello BPM
+      progressIncrement *= (1 + 0.15 * (level - 1));
 
-      if (interval < 300) feedbackMessage = "Ritmo elevato!";
-      else if (interval > 1000) feedbackMessage = "Ritmo lento!";
-      else feedbackMessage = "";
+      feedbackMessage = (interval < 300) ? "Ritmo elevato!" : (interval > 1000) ? "Ritmo lento!" : "";
       feedbackElement.textContent = feedbackMessage;
 
-      // Aggiornamento stato (distanza ed energia)
+      // Aggiornamento di distanza ed energia
       distance += progressIncrement;
       energy -= energyCost;
       if (energy < 0) energy = 0;
       if (distance > totalDistance) distance = totalDistance;
       energyElement.textContent = "Energia: " + Math.floor(energy) + "%";
-
+      
       drawGame();
       drawAltimetry();
     }
@@ -288,44 +342,45 @@
       gameStarted = true;
       startTime = Date.now();
       lastTapTime = Date.now();
-      feedbackElement.textContent = "Tocca ritmicamente per avanzare!";
+      feedbackElement.textContent = "Tocca per avanzare!";
       setInterval(updateTimer, 100);
       requestAnimationFrame(gameLoop);
     }
 
-    // Ciclo principale
+    // Loop principale
     function gameLoop() {
       if (gameStarted) {
         if (distance >= totalDistance) {
           gameStarted = false;
           feedbackElement.textContent = "Percorso completato!";
-          alert("Percorso completato in " + timerElement.textContent);
+          alert("Hai completato il percorso in " + timerElement.textContent);
+          recordScore(timerElement.textContent);
         } else {
           requestAnimationFrame(gameLoop);
         }
       }
     }
 
-    // Disegna la mappa (vista dall’alto) con il percorso reale e il runner animato
+    // Funzione per disegnare la mappa (vista dall’alto) con percorso e animazione runner
     function drawGame() {
       gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
       const margin = 50;
       const mapWidth = gameCanvas.width - 2 * margin;
       const baseY = gameCanvas.height - 100;
 
-      // Disegna il percorso (sagoma reale con linee spesse in stile pixel art)
+      // Disegna il tracciato del percorso – fedele alla sagoma reale (in rosso)
       gameCtx.strokeStyle = "#ffea00";
       gameCtx.lineWidth = 4;
       gameCtx.beginPath();
       for (let i = 0; i <= totalDistance; i++) {
         const x = margin + (i / totalDistance) * mapWidth;
-        const y = baseY - altitudes[i] * 2; // Scala la quota per la mappa
+        const y = baseY - altitudes[i] * 2; // scala applicata per la mappa
         if (i === 0) gameCtx.moveTo(x, y);
         else gameCtx.lineTo(x, y);
       }
       gameCtx.stroke();
 
-      // Animazione semplice del runner: alterna 2 frame per simulare passi
+      // Animazione runner (rappresentato in pixel art: visualizzato con testa e piedi in movimento)
       runnerAnimationCounter++;
       if (runnerAnimationCounter > 10) {
         runnerFrame = (runnerFrame + 1) % 2;
@@ -334,11 +389,12 @@
       const runnerX = margin + (distance / totalDistance) * mapWidth;
       const runnerY = baseY - altitudes[Math.floor(distance)] * 2;
       gameCtx.fillStyle = avatar.jersey;
+      // Il runner viene disegnato con un semplice "sprite" pixel art che cambia leggermente per simulare il movimento
       if (runnerFrame === 0) gameCtx.fillRect(runnerX - 6, runnerY - 12, 12, 12);
       else gameCtx.fillRect(runnerX - 6, runnerY - 10, 12, 12);
     }
 
-    // Disegna il profilo altimetrico (vista di profilo) e il runner sopra di esso
+    // Disegna il profilo altimetrico (vista laterale) e il runner in questo contesto
     function drawAltimetry() {
       altCtx.clearRect(0, 0, altCanvas.width, altCanvas.height);
       altCtx.strokeStyle = "#ffea00";
@@ -357,7 +413,7 @@
       altCtx.fillRect(runnerX - 4, runnerY - 4, 8, 8);
     }
 
-    // Gestione degli eventi di tap/click/pointer per desktop e mobile
+    // Gestione dei tap per avanzare (desktop e mobile)
     function pointerHandler(e) {
       e.preventDefault();
       handleTap();
@@ -365,6 +421,38 @@
     gameCanvas.addEventListener("mousedown", pointerHandler);
     gameCanvas.addEventListener("touchstart", pointerHandler);
     gameCanvas.addEventListener("pointerdown", pointerHandler);
+
+    // --- Scoreboard e Controlli ---
+    // Registra il punteggio (salva nel localStorage)
+    function recordScore(time) {
+      let scores = JSON.parse(localStorage.getItem("taptrailScores") || "[]");
+      scores.push(time);
+      scores.sort(); // Ordina i tempi (i valori "00:xx" ordinati come stringhe funzionano per questo semplice esempio)
+      scores = scores.slice(0, 5);
+      localStorage.setItem("taptrailScores", JSON.stringify(scores));
+    }
+    // Visualizza la scoreboard
+    function showScoreboard() {
+      let scores = JSON.parse(localStorage.getItem("taptrailScores") || "[]");
+      scoreList.innerHTML = "";
+      scores.forEach((score) => {
+        const li = document.createElement("li");
+        li.textContent = score;
+        scoreList.appendChild(li);
+      });
+      scoreboardDiv.style.display = "block";
+    }
+    // Eventi per i pulsanti di controllo
+    homeButton.addEventListener("click", function() {
+      location.reload();
+    });
+    newGameButton.addEventListener("click", function() {
+      location.reload();
+    });
+    scoreButton.addEventListener("click", showScoreboard);
+    closeScoreButton.addEventListener("click", function() {
+      scoreboardDiv.style.display = "none";
+    });
   </script>
 </body>
 </html>
