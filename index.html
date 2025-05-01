@@ -1,0 +1,433 @@
+// Revision 4.1
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tap Trail - L'Alba dei Marsi 2025 (Revision 4.1)</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #fff; /* Sfondo bianco */
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #ddd; /* Grigio chiaro */
+      touch-action: none;
+    }
+    /* Menu e Scoreboard con sfondo chiaro e testo scuro */
+    #menu, #scoreboard {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #000;
+      text-align: center;
+      background: rgba(255,255,255,0.95);
+      padding: 20px;
+      border: 2px solid #000;
+      border-radius: 10px;
+    }
+    .genderOption {
+      display: inline-block;
+      margin: 10px;
+      vertical-align: middle;
+    }
+    .genderOption input {
+      vertical-align: middle;
+    }
+    .genderOption label {
+      vertical-align: middle;
+      margin-right: 5px;
+      font-size: 20px;
+    }
+    .runnerIcon {
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+    #credits {
+      font-size: 12px;
+      color: #444;
+      margin-top: 10px;
+    }
+    button {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      background: #fff;
+      border: 2px solid #000;
+      color: #000;
+    }
+    input, select {
+      font-size: 20px;
+      padding: 5px;
+      text-transform: uppercase;
+      width: 150px;
+      text-align: center;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      background: #fff;
+      border: 2px solid #000;
+      color: #000;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 5px 10px;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas di gioco -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Schermata Home -->
+  <div id="menu">
+    <h1>Tap Trail - L'Alba dei Marsi 2025</h1>
+    <div>
+      <p style="font-size:16px; margin-bottom:5px;">Seleziona il sesso del personaggio:</p>
+      <div class="genderOption">
+        <input type="radio" id="male" name="gender" value="male" checked>
+        <label for="male">Maschile</label>
+        <!-- SVG per runner maschile -->
+        <svg class="runnerIcon" width="50" height="50" viewBox="0 0 50 50">
+          <rect x="15" y="5" width="20" height="20" fill="#888"/>
+          <rect x="20" y="25" width="10" height="15" fill="#888"/>
+          <line x1="20" y1="30" x2="10" y2="45" stroke="#888" stroke-width="2"/>
+          <line x1="30" y1="30" x2="40" y2="45" stroke="#888" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="genderOption">
+        <input type="radio" id="female" name="gender" value="female">
+        <label for="female">Femminile</label>
+        <!-- SVG per runner femminile -->
+        <svg class="runnerIcon" width="50" height="50" viewBox="0 0 50 50">
+          <rect x="15" y="5" width="20" height="20" fill="#FFC0CB"/>
+          <rect x="20" y="25" width="10" height="15" fill="#FFC0CB"/>
+          <line x1="20" y1="30" x2="10" y2="45" stroke="#FFC0CB" stroke-width="2"/>
+          <line x1="30" y1="30" x2="40" y2="45" stroke="#FFC0CB" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:16px; margin-bottom:5px;">Seleziona il colore della canotta:</p>
+      <select id="shirtColor">
+        <option value="red">Rosso</option>
+        <option value="blue">Blu</option>
+        <option value="yellow-blue">Giallo-Blu</option>
+        <option value="white-green">Bianco-Verde</option>
+      </select>
+    </div>
+    <button id="startButton">Inizia Gioco</button>
+    <button id="viewScores">Visualizza Scoreboard</button>
+    <p id="credits">created by 997Creations – Rev 4.1</p>
+  </div>
+
+  <!-- Schermata Scoreboard -->
+  <div id="scoreboard" class="hidden">
+    <h1>Fine Gara!</h1>
+    <p>Tempo: <span id="finalTime"></span></p>
+    <p>Inserisci le prime tre lettere:</p>
+    <input type="text" id="initials" maxlength="3">
+    <br>
+    <button id="submitScore">Invia</button>
+  </div>
+
+  <!-- Importa i dati del percorso e del profilo altimetrico -->
+  <script src="data.js"></script>
+
+  <!-- Codice del gioco -->
+  <script>
+    // Revision 4.1 (Utilizza i dati reali importati da data.js)
+
+    // Stati di gioco
+    let gameState = "menu";
+
+    // Scelte dalla home
+    let gender = "male";
+    let shirtColor = "red";
+
+    // Variabili di gioco
+    let progress = 0;
+    let speed = 0;
+    let energy = 100;
+    let timer = 0;
+    let lastTime = null;
+    let raceFinished = false;
+    let lastDebug = 0;
+
+    // Array per i punteggi
+    let scoreboardRecords = [];
+
+    // I dati trackPoints e altKeyPoints provengono da data.js
+    // Calcola il totale del percorso e i segmenti
+    let segments = [];
+    let totalDistance = 0;
+    for (let i = 0; i < trackPoints.length - 1; i++) {
+      const dx = trackPoints[i+1].x - trackPoints[i].x;
+      const dy = trackPoints[i+1].y - trackPoints[i].y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      segments.push({ length: len, start: trackPoints[i], end: trackPoints[i+1] });
+      totalDistance += len;
+    }
+
+    // Funzione per interpolare il profilo altimetrico
+    function getAltitude(p) {
+      for (let i = 0; i < altKeyPoints.length - 1; i++) {
+        if (p >= altKeyPoints[i].p && p <= altKeyPoints[i+1].p) {
+          const ratio = (p - altKeyPoints[i].p) / (altKeyPoints[i+1].p - altKeyPoints[i].p);
+          return altKeyPoints[i].alt + ratio * (altKeyPoints[i+1].alt - altKeyPoints[i].alt);
+        }
+      }
+      return altKeyPoints[altKeyPoints.length-1].alt;
+    }
+
+    // Calcola la posizione del runner lungo il percorso
+    function getTrackPosition(p) {
+      const distanceAlong = p * totalDistance;
+      let traveled = 0;
+      for (let seg of segments) {
+        if (traveled + seg.length >= distanceAlong) {
+          const segRatio = (distanceAlong - traveled) / seg.length;
+          const x = seg.start.x + (seg.end.x - seg.start.x) * segRatio;
+          const y = seg.start.y + (seg.end.y - seg.start.y) * segRatio;
+          return { x, y };
+        }
+        traveled += seg.length;
+      }
+      return trackPoints[trackPoints.length-1];
+    }
+
+    /* ----- Gestione degli Input ----- */
+    function handleTap() {
+      if (gameState !== "playing") return;
+      if (energy <= 0) return;
+      console.log("Tap detected. Prima: speed =", speed.toFixed(3), "energy =", energy.toFixed(1));
+      const deltaP = 0.01;
+      const currentAlt = getAltitude(progress);
+      const nextAlt = getAltitude(Math.min(progress + deltaP, 1));
+      const diff = nextAlt - currentAlt;
+      let multiplier = (diff > 0) ? 1.5 : ((diff < 0) ? 0.7 : 1);
+      speed += 0.005;
+      // Consumo di energia che aumenta se il runner va veloce
+      energy -= (1 + speed * 20) * multiplier;
+      if (energy < 0) energy = 0;
+      console.log("Dopo: speed =", speed.toFixed(3), "energy =", energy.toFixed(1));
+    }
+
+    window.addEventListener("keydown", e => {
+      if (e.code === "Space") {
+        console.log("Space key pressed");
+        handleTap();
+      }
+    });
+    window.addEventListener("mousedown", e => {
+      console.log("Mousedown event detected");
+      handleTap();
+    });
+    window.addEventListener("touchstart", e => {
+      console.log("Touchstart event detected");
+      handleTap();
+    });
+    let isMouseDown = false;
+    window.addEventListener("mousedown", () => { isMouseDown = true; });
+    window.addEventListener("mouseup", () => { isMouseDown = false; });
+    window.addEventListener("touchstart", () => { isMouseDown = true; });
+    window.addEventListener("touchend", () => { isMouseDown = false; });
+    function mouseDownPressed() { return isMouseDown; }
+
+    /* ----- Game Loop ----- */
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      if (gameState === "playing") {
+        if (!raceFinished) timer += dt;
+        if (timer - lastDebug >= 1) {
+          console.log(`GameLoop: timer=${timer.toFixed(2)} s, dt=${dt.toFixed(3)} s`);
+          lastDebug = timer;
+        }
+        if (energy < 100 && !mouseDownPressed()) {
+          energy += 10 * dt;
+          if (energy > 100) energy = 100;
+        }
+        if (energy <= 0) { speed = 0; }
+        if (energy > 0) { progress += speed * dt; }
+        if (progress >= 1 && !raceFinished) {
+          progress = 1;
+          raceFinished = true;
+          setTimeout(() => showScoreboardFinal(), 500);
+        }
+      }
+      drawGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Calcola la "pace" fakemin/km (se speed = 0 -> 10, se speed = 0.1 -> 2.45)
+    function getPace() {
+      const maxSpeed = 0.1;
+      let clampedSpeed = Math.min(speed, maxSpeed);
+      let pace = 10 - (clampedSpeed / maxSpeed) * (10 - 2.45);
+      return pace.toFixed(2);
+    }
+
+    function formatTime(t) {
+      const minutes = Math.floor(t/60);
+      const seconds = Math.floor(t % 60);
+      const centiseconds = Math.floor((t % 1)*100);
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2,"0")}:${String(centiseconds).padStart(2,"0")}`;
+    }
+
+    /* ----- Funzioni di Disegno ----- */
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (gameState === "playing") {
+        drawTrack();
+        drawRunner();
+        drawAltimetry();
+        ctx.fillStyle = "#000";
+        ctx.font = "24px sans-serif";
+        ctx.fillText("Timer: " + formatTime(timer), 20, 40);
+        ctx.fillText("Energia: " + Math.floor(energy) + "%", 20, 70);
+        ctx.fillText("Pace: " + getPace() + " fakemin/km", 20, 100);
+      }
+    }
+
+    function drawTrack() {
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i < trackPoints.length; i++) {
+        if (i === 0) ctx.moveTo(trackPoints[i].x, trackPoints[i].y);
+        else ctx.lineTo(trackPoints[i].x, trackPoints[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function drawRunner() {
+      const pos = getTrackPosition(progress);
+      ctx.fillStyle = (gender === "male") ? "#888" : "#FFC0CB";
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 10, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = getShirtColor(shirtColor);
+      ctx.fillRect(pos.x-6, pos.y-4, 12, 8);
+    }
+
+    function getShirtColor(color) {
+      switch(color) {
+        case "red": return "red";
+        case "blue": return "blue";
+        case "yellow-blue": return "gold";
+        case "white-green": return "lightgreen";
+        default: return "red";
+      }
+    }
+
+    function drawAltimetry() {
+      const graphHeight = 100;
+      const graphWidth = canvas.width - 40;
+      const graphX = canvas.width * 0.05;
+      const graphY = canvas.height - graphHeight - 20;
+      ctx.fillStyle = "#ccc";
+      ctx.fillRect(graphX, graphY, graphWidth, graphHeight);
+      ctx.fillStyle = "#000";
+      ctx.font = "16px sans-serif";
+      ctx.fillText("Altimetria Gara da 21 KM", graphX+10, graphY+20);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const samples = 100;
+      for (let i = 0; i <= samples; i++) {
+        const p = i / samples;
+        const alt = getAltitude(p);
+        const minAlt = 800, maxAlt = 1000;
+        const yPos = graphY + graphHeight - ((alt - minAlt) / (maxAlt - minAlt)) * graphHeight;
+        const xPos = graphX + p * graphWidth;
+        if (i === 0) ctx.moveTo(xPos, yPos);
+        else ctx.lineTo(xPos, yPos);
+      }
+      ctx.stroke();
+      const runnerAlt = getAltitude(progress);
+      const runnerX = graphX + progress * graphWidth;
+      const runnerY = graphY + graphHeight - ((runnerAlt - 800)/(1000-800))*graphHeight;
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(runnerX, runnerY, 5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    /* ----- Scoreboard ----- */
+    function showScoreboardFinal() {
+      gameState = "scoreboard";
+      document.getElementById("finalTime").textContent = formatTime(timer);
+      document.getElementById("scoreboard").classList.remove("hidden");
+    }
+    function showFinalScoreboard() {
+      let html = "<div style='color: #000;'>";
+      html += "<h1>Scoreboard</h1>";
+      html += "<table><thead><tr><th>Pos.</th><th>Iniziali</th><th>Tempo</th></tr></thead><tbody>";
+      scoreboardRecords.sort((a, b) => a.time - b.time);
+      scoreboardRecords.forEach((record, index) => {
+        html += "<tr><td>" + (index+1) + "</td><td>" + record.initials + "</td><td>" + formatTime(record.time) + "</td></tr>";
+      });
+      html += "</tbody></table>";
+      html += "<br><button id='homeButton'>Torna alla Home</button>";
+      html += "</div>";
+      const scoreboardDiv = document.getElementById("scoreboard");
+      scoreboardDiv.innerHTML = html;
+      document.getElementById("homeButton").addEventListener("click", () => {
+        scoreboardDiv.classList.add("hidden");
+        document.getElementById("menu").classList.remove("hidden");
+        gameState = "menu";
+      });
+    }
+
+    /* ----- Eventi UI ----- */
+    document.getElementById("startButton").addEventListener("click", () => {
+      const genderInputs = Array.from(document.getElementsByName("gender"));
+      genderInputs.forEach(input => { if (input.checked) gender = input.value; });
+      shirtColor = document.getElementById("shirtColor").value;
+      document.getElementById("menu").classList.add("hidden");
+      gameState = "playing";
+      progress = 0;
+      speed = 0;
+      energy = 100;
+      timer = 0;
+      raceFinished = false;
+      lastTime = null;
+      console.log("Gioco avviato. Stato: playing");
+    });
+
+    document.getElementById("submitScore").addEventListener("click", () => {
+      const initialsInput = document.getElementById("initials");
+      const initials = initialsInput.value.trim().toUpperCase();
+      if(initials.length === 0) return;
+      scoreboardRecords.push({ initials: initials, time: timer });
+      showFinalScoreboard();
+    });
+
+    document.getElementById("viewScores").addEventListener("click", () => {
+      if(scoreboardRecords.length === 0) {
+        alert("Non ci sono punteggi registrati.");
+        return;
+      }
+      showFinalScoreboard();
+    });
+
+    // Avvia il game loop
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
