@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tap Trail - L'Alba dei Marsi 21km</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Press Start 2P", monospace; /* Font in stile pixel art */
+      background: #000; /* Sfondo nero */
+      color: #fff; /* Testo bianco */
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #202020; /* Sfondo scuro */
+      touch-action: none;
+      image-rendering: pixelated; /* Effetto pixel art */
+    }
+    #menu, #scoreboard, #leaderboard {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      background: #101010; /* Sfondo scuro per i menu */
+      padding: 20px;
+      border: 4px solid #fff; /* Bordo bianco spesso */
+      border-radius: 0; /* Rimuovi bordi arrotondati */
+      box-shadow: 0 0 10px #fff; /* Effetto bagliore */
+    }
+    button, select, input {
+      font-family: "Press Start 2P", monospace;
+      background: #000;
+      color: #fff;
+      border: 2px solid #fff;
+      padding: 10px;
+      font-size: 14px;
+      margin: 5px;
+      text-transform: uppercase; /* Testo in maiuscolo */
+      cursor: pointer;
+    }
+    button:hover, select:hover, input:hover {
+      background: #fff;
+      color: #000;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #101010;
+      color: #fff;
+    }
+    th, td {
+      border: 2px solid #fff;
+      padding: 10px;
+      text-align: center;
+    }
+    #credits {
+      font-size: 10px;
+      color: #888; /* Colore grigio per i crediti */
+      margin-top: 10px;
+    }
+    #logoHome {
+      display: block;
+      margin: 0 auto;
+      width: 250px; /* Dimensioni maggiori per il logo nella home */
+    }
+    .infoBox {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #000; /* Sfondo nero */
+      border: 2px solid #fff; /* Bordo bianco */
+      padding: 10px;
+      font-family: "Press Start 2P", monospace;
+      color: #fff;
+      text-align: left;
+      width: 220px; /* Dimensioni fisse */
+      height: 120px; /* Altezza fissa */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .infoBox .energyBar {
+      width: 100%;
+      height: 10px; /* Barra sottile */
+      background: #101010; /* Sfondo scuro */
+      border: 1px solid #fff; /* Bordo bianco */
+    }
+    .infoBox .energyFill {
+      height: 100%;
+    }
+    input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #000;
+      border: 2px solid #fff;
+      margin-right: 5px;
+      cursor: pointer;
+      image-rendering: pixelated; /* Pixelated effect */
+    }
+
+    input[type="radio"][value="male"]:checked {
+      background: #4444ff; /* Blue VGA256 */
+    }
+
+    input[type="radio"][value="female"]:checked {
+      background: #ff44aa; /* Fuchsia VGA256 */
+    }
+
+    #gameTitle {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+      font-size: 18px; /* Testo leggermente più grande */
+      text-shadow: 2px 2px #000;
+    }
+    #leaderboard {
+      max-width: 90%; /* Adatta la larghezza allo schermo */
+      max-height: 80%; /* Adatta l'altezza allo schermo */
+      overflow-y: auto; /* Rendi scrollabile verticalmente */
+      margin: 0 auto;
+    }
+    #leaderboard table {
+      width: 100%; /* Adatta la tabella alla larghezza del contenitore */
+    }
+    #leaderboard th, #leaderboard td {
+      font-size: 12px; /* Riduci il font per adattarlo meglio */
+    }
+    label.genderOption {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      flex-wrap: wrap; /* Rendi responsivo */
+    }
+    label.genderOption img {
+      width: 30px; /* Rendi le immagini più piccole */
+      height: 30px;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"> <!-- Font pixel art -->
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas> <!-- Dimensioni fisse per stile VGA -->
+  
+  <div id="menu">
+    <img id="logoHome" src="assets/logoadm.png" alt="Logo ADM"> <!-- Logo centrato nella home -->
+    <h1>Tap Trail</h1>
+    <p style="
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+      margin-top: -10px;
+    ">L'Alba dei Marsi 21Km</p>
+    <p>Seleziona il sesso del personaggio:</p>
+    <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+      <label class="genderOption">
+        <input type="radio" name="gender" value="male" checked> Maschile
+        <img src="assets/uomo.png" alt="Uomo">
+      </label>
+      <label class="genderOption">
+        <input type="radio" name="gender" value="female"> Femminile
+        <img src="assets/donna.png" alt="Donna">
+      </label>
+    </div>
+    <p>Colore canotta:</p>
+    <select id="shirtColor">
+      <option value="red">Rosso</option>
+      <option value="blue">Blu</option>
+      <option value="yellow-blue">Giallo-Blu</option>
+      <option value="white-green">Bianco-Verde</option>
+    </select>
+    <br>
+    <button id="startButton">Inizia Gioco</button>
+    <button id="viewScores">Visualizza Scoreboard</button>
+    <p id="credits">created by 997Creations – Rev 1.0</p>
+  </div>
+
+  <div id="inGameUI" class="hidden">
+    <div class="infoBox">
+      <p id="timeDisplay" style="margin: 0;">Tempo: 00:00:00</p>
+      <p id="energyDisplay" style="margin: 0;">Energia: 100%</p>
+      <div class="energyBar">
+        <div id="energyFill" class="energyFill"></div> <!-- Barra dell'energia -->
+      </div>
+      <p id="runnerPace" style="margin: 0;">Ritmo: millemila fakemin/km</p>
+    </div>
+    <div id="genderDisplay" style="
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+    ">
+      <p id="genderText"></p>
+      <img id="genderImage" src="" alt="Gender Image" style="width: 40px; height: 40px;">
+    </div>
+    <button id="homeButtonInGame" style="
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      font-family: 'Press Start 2P', monospace;
+      background: #000;
+      color: #fff;
+      border: 2px solid #fff;
+      padding: 5px;
+      font-size: 12px;
+      cursor: pointer;
+    ">Torna alla Home</button>
+    <div id="gameTitle">L'Alba dei Marsi - 21 Km</div>
+  </div>
+  
+  <div id="scoreboard" class="hidden">
+    <h1>Gara Conclusa!</h1>
+    <p>Tempo: <span id="finalTime"></span></p>
+    <p>Inserisci le iniziali:</p>
+    <input type="text" id="initials" maxlength="3">
+    <br>
+    <button id="submitScore">Invia</button>
+  </div>
+
+  <div id="leaderboard" class="hidden">
+    <h1>Leaderboard</h1>
+    <table id="leaderboardTable">
+      <thead>
+        <tr>
+          <th>Posizione</th>
+          <th>Iniziali</th>
+          <th>Tempo</th>
+          <th>Genere</th>
+          <th>Squadra</th> <!-- Nuova colonna per il colore della squadra -->
+        </tr>
+      </thead>
+      <tbody>
+        <!-- I record verranno aggiunti dinamicamente -->
+      </tbody>
+    </table>
+    <button id="homeButton">Torna alla Home</button>
+    <button id="newGameButton">Nuova Partita</button>
+  </div>
+
+  <div id="gameMessage" style="
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #000;
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+    border: 2px solid #fff;
+    display: none;
+    z-index: 1000;
+  "></div>
+
+  <script src="data.js"></script>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let gameState = "menu";
+    let gender = "male";
+    let shirtColor = "red";
+    let progress = 0, speed = 0, energy = 100, timer = 0, lastTime = null;
+    let raceFinished = false;
+    let scoreboardRecords = JSON.parse(localStorage.getItem("scoreboardRecords")) || []; // Carica i record dalla memoria locale
+    let lastTapTime = 0; // Per tracciare l'ultimo tap
+    let tapInterval = 0; // Per calcolare l'intervallo tra i tap
+    let lastInputTime = 0; // Per tracciare l'ultimo input
+    let inputFrequency = 0; // Frequenza degli input
+    let isPressing = false; // Stato del pulsante
+    let lastProgress = 0; // Per calcolare il movimento del runner
+    let energyRechargeDelay = 0; // Timer per il blocco del runner quando l'energia è a zero
+
+    let currentSprite = 0; // Track the current sprite
+    const sprites = [
+      new Image(),
+      new Image()
+    ];
+    sprites[0].src = 'assets/sprite1red.jpg';
+    sprites[1].src = 'assets/sprite2red.jpg';
+
+    // Calcolo segmenti e lunghezza tracciato
+    let segments = [];
+    let totalDistance = 0;
+    for (let i = 0; i < trackPoints.length - 1; i++) {
+      const p1 = trackPoints[i];
+      const p2 = trackPoints[i + 1];
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      segments.push({ start: p1, end: p2, length: len });
+      totalDistance += len;
+    }
+
+    function getAltitude(p) {
+      for (let i = 0; i < altKeyPoints.length - 1; i++) {
+        if (p >= altKeyPoints[i].p && p <= altKeyPoints[i+1].p) {
+          const r = (p - altKeyPoints[i].p) / (altKeyPoints[i+1].p - altKeyPoints[i].p);
+          return altKeyPoints[i].alt + r * (altKeyPoints[i+1].alt - altKeyPoints[i].alt);
+        }
+      }
+      return altKeyPoints[altKeyPoints.length - 1].alt;
+    }
+
+    function getTrackPosition(p) {
+      const distanceAlong = p * totalDistance;
+      let traveled = 0;
+      for (let seg of segments) {
+        if (traveled + seg.length >= distanceAlong) {
+          const r = (distanceAlong - traveled) / seg.length;
+          return {
+            x: seg.start.x + (seg.end.x - seg.start.x) * r,
+            y: seg.start.y + (seg.end.y - seg.start.y) * r
+          };
+        }
+        traveled += seg.length;
+      }
+      return segments[segments.length - 1].end;
+    }
+
+    function handleInputStart() {
+      if (gameState !== "playing" || energy <= 0 || energyRechargeDelay > 0) return; // Blocca input se energia è a zero e in ritardo
+      const currentTime = performance.now();
+      if (!isPressing) {
+        let calculatedFrequency = currentTime - lastInputTime; // Calcola l'intervallo tra gli input
+
+        // Imposta un limite minimo e massimo per inputFrequency
+        if (calculatedFrequency < 50) {
+          calculatedFrequency = 50; // Ignora input troppo rapidi
+        } else if (calculatedFrequency > 1000) {
+          calculatedFrequency = 1000; // Limita input troppo lenti
+        }
+
+        inputFrequency = calculatedFrequency;
+        lastInputTime = currentTime;
+        isPressing = true;
+
+        // Alterna lo sprite
+        currentSprite = (currentSprite + 1) % sprites.length;
+
+        // Calcola la velocità in base alla frequenza degli input
+        const speedFactor = Math.min(1 / inputFrequency, 0.5); // Limita il fattore di velocità
+        const moveDistance = speedFactor * 0.48; // Distanza percorsa per input
+        progress = Math.min(progress + moveDistance, 1); // Aggiorna il progresso
+
+        // Calcola il consumo di energia
+        const altitudeChange = getAltitude(progress) - getAltitude(lastProgress); // Differenza di altitudine
+        const slopeFactor = altitudeChange > 0 ? 1 + altitudeChange * 4 : 1; // Penalità per la salita
+        energy -= (0.1 + speedFactor * 4) * slopeFactor; // Consumo di energia
+        if (energy < 0) {
+          energy = 0;
+          energyRechargeDelay = 1.5; // Imposta il tempo di blocco
+        }
+
+        lastProgress = progress; // Aggiorna il progresso precedente
+      }
+    }
+
+    function handleInputEnd() {
+      isPressing = false;
+    }
+
+    window.addEventListener("keydown", e => e.code === "Space" && handleInputStart());
+    window.addEventListener("keyup", e => e.code === "Space" && handleInputEnd());
+    window.addEventListener("mousedown", handleInputStart);
+    window.addEventListener("mouseup", handleInputEnd);
+    window.addEventListener("touchstart", handleInputStart);
+    window.addEventListener("touchend", handleInputEnd);
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      if (gameState === "playing") {
+        timer += dt;
+
+        // Recupera energia quando fermo
+        if (energy === 0) {
+          energyRechargeDelay -= dt; // Riduci il timer di blocco
+          if (energyRechargeDelay <= 0) {
+            energy = Math.min(energy + 10 * dt, 100); // Ricarica energia dopo il blocco
+          }
+        } else if (speed === 0) {
+          energy = Math.min(100, energy + 5 * dt); // Recupera energia normalmente
+        }
+
+        // Aggiorna la posizione del runner solo se non è bloccato
+        if (energy > 0 || energyRechargeDelay <= 0) {
+          const targetPosition = getTrackPosition(progress);
+          const currentPosition = getTrackPosition(lastProgress);
+          const interpolationFactor = Math.min(dt * 20, 1); // Aumenta il fattore di interpolazione per maggiore fluidità
+          const interpolatedPosition = {
+            x: currentPosition.x + (targetPosition.x - currentPosition.x) * interpolationFactor,
+            y: currentPosition.y + (targetPosition.y - currentPosition.y) * interpolationFactor,
+          };
+
+          drawGame(interpolatedPosition);
+        }
+
+        if (progress >= 1 && !raceFinished) {
+          raceFinished = true;
+          setTimeout(() => showScoreboardFinal(), 500);
+        }
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function formatTime(t) {
+      const m = String(Math.floor(t / 60)).padStart(2, '0');
+      const s = String(Math.floor(t % 60)).padStart(2, '0');
+      const c = String(Math.floor((t % 1) * 100)).padStart(2, '0');
+      return `${m}:${s}:${c}`;
+    }
+
+    function drawGame(runnerPosition) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (gameState === "playing") {
+        drawBackground(); // Disegna lo sfondo generale
+
+        // Center the track and background on the screen
+        const offsetX = canvas.width / 2 - runnerPosition.x;
+        const offsetY = canvas.height / 2 - runnerPosition.y;
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+
+        drawTrackBackground(); // Disegna lo sfondo del percorso
+        drawTrack(); // Disegna il percorso rosso
+        drawRunner(runnerPosition); // Disegna il runner
+
+        ctx.restore();
+
+        drawAltimetry(runnerPosition); // Disegna il profilo altimetrico
+        updateEnergyBar(); // Aggiorna la barra dell'energia
+      }
+    }
+
+    function drawTrackBackground() {
+      const trackBackground = new Image();
+      trackBackground.src = 'assets/sfondoalba.png'; // Sfondo del percorso visto dall'alto
+      ctx.globalAlpha = 0.8; // Imposta la trasparenza all'80%
+      ctx.drawImage(trackBackground, -canvas.width / 2, -canvas.height / 2, canvas.width * 2, canvas.height * 2); // Disegna lo sfondo
+      ctx.globalAlpha = 1.0; // Ripristina l'opacità
+    }
+
+    function drawAltimetry(runnerPosition) {
+      const margin = 20;
+      const gW = canvas.width - 2 * margin;
+      const gH = 100;
+      const gX = margin;
+      const gY = canvas.height - gH - margin;
+
+      // Draw the altimetry background with VGA 256 palette
+      const altimetryImage = ctx.createImageData(gW, gH);
+      for (let x = 0; x < gW; x++) {
+        for (let y = 0; y < gH; y++) {
+          const altitude = gH - ((getAltitude(x / gW) - 750) / 300) * gH;
+          const index = (y * gW + x) * 4;
+          if (y > altitude) {
+            // Brown for below the line (earth) - VGA 256
+            altimetryImage.data[index] = 92; // Red
+            altimetryImage.data[index + 1] = 64; // Green
+            altimetryImage.data[index + 2] = 51; // Blue
+            altimetryImage.data[index + 3] = 255; // Alpha
+          } else {
+            // Blue for above the line (sky) - VGA 256
+            altimetryImage.data[index] = 56; // Red
+            altimetryImage.data[index + 1] = 88; // Green
+            altimetryImage.data[index + 2] = 152; // Blue
+            altimetryImage.data[index + 3] = 255; // Alpha
+          }
+        }
+      }
+      ctx.putImageData(altimetryImage, gX, gY);
+
+      // Draw the altimetry profile line with VGA 256 palette
+      ctx.strokeStyle = "#ffffff"; // White (VGA 256)
+      ctx.lineWidth = 4; // Double the thickness
+      ctx.beginPath();
+      altKeyPoints.forEach((pt, i) => {
+        const x = gX + pt.p * gW;
+        const y = gY + gH - ((pt.alt - 750) / 300) * gH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Draw the runner's reference on the altimetry profile
+      const runnerX = gX + progress * gW;
+      const runnerY = gY + gH - ((getAltitude(progress) - 750) / 300) * gH;
+      ctx.fillStyle = "#ff0000"; // Rosso
+      ctx.beginPath();
+      ctx.arc(runnerX, runnerY, 8, 0, Math.PI * 2); // Ingrandisci il cursore
+      ctx.fill();
+
+      // Align "Altimetria" text with "Energia" and "Tempo"
+      ctx.fillStyle = "#ffffff"; // White (VGA 256)
+      ctx.font = "12px 'Press Start 2P'";
+      ctx.fillText("Altimetria", 20, gY + gH / 2); // Aligned position
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = "#000"; // Sfondo nero
+      ctx.fillRect(0, 0, canvas.width, canvas.height); // Disegna lo sfondo
+    }
+
+    function drawTrack() {
+      ctx.strokeStyle = "#ff0000"; // Colore rosso (VGA256) per la traccia
+      ctx.lineWidth = 6; // Raddoppia lo spessore del percorso
+      ctx.beginPath();
+      trackPoints.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+    }
+
+    function drawRunner(position) {
+      // Ensure the runner stays on the track
+      const trackPosition = getTrackPosition(progress);
+      position.x = trackPosition.x;
+      position.y = trackPosition.y;
+
+      // Alternate between sprites
+      const sprite = sprites[currentSprite];
+
+      // Create an offscreen canvas to handle transparency
+      const offscreenCanvas = document.createElement('canvas');
+      const offscreenCtx = offscreenCanvas.getContext('2d');
+      offscreenCanvas.width = 40; // Double the width
+      offscreenCanvas.height = 40; // Double the height
+
+      // Draw the sprite onto the offscreen canvas
+      offscreenCtx.drawImage(sprite, 0, 0, 40, 40);
+
+      // Make white color transparent
+      const imageData = offscreenCtx.getImageData(0, 0, 40, 40);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        if (
+          imageData.data[i] === 255 && // Red
+          imageData.data[i + 1] === 255 && // Green
+          imageData.data[i + 2] === 255 && // Blue
+          imageData.data[i + 3] === 255 // Alpha
+        ) {
+          imageData.data[i + 3] = 0; // Set alpha to 0 (transparent)
+        }
+      }
+      offscreenCtx.putImageData(imageData, 0, 0);
+
+      // Draw the processed sprite onto the main canvas
+      ctx.drawImage(offscreenCanvas, position.x - 20, position.y - 20, 40, 40); // Double the size
+    }
+
+    function getShirtColor(color) {
+      switch(color) {
+        case "red": return "#ff0000";
+        case "blue": return "#0000ff";
+        case "yellow-blue": return "#ffff00";
+        case "white-green": return "#00ff00";
+        default: return "#888888";
+      }
+    }
+
+    function updateEnergyBar() {
+      const energyFill = document.getElementById("energyFill");
+      const energyDisplay = document.getElementById("energyDisplay");
+      const timeDisplay = document.getElementById("timeDisplay");
+      const runnerPace = document.getElementById("runnerPace");
+
+      energyFill.style.width = energy + "%"; // Larghezza proporzionale all'energia
+      energyDisplay.textContent = `Energia: ${Math.floor(energy)}%`;
+      timeDisplay.textContent = `Tempo: ${formatTime(timer)}`;
+
+      if (energy >= 51) {
+        energyFill.style.background = "#00ff00"; // Verde
+      } else if (energy >= 30) {
+        energyFill.style.background = "#ffaa00"; // Arancione
+      } else {
+        energyFill.style.background = "#ff0000"; // Rosso
+      }
+
+      // Aggiorna il ritmo
+      if (energy === 0 || inputFrequency === 0) {
+        runnerPace.textContent = "Ritmo: millemila fakemin/km";
+      } else {
+        const pace = Math.max(2.33, Math.min(10, 10 / (1000 / inputFrequency))).toFixed(2); // Clamp pace between 2.33 and 10
+        runnerPace.textContent = `Ritmo: ${pace} fakemin/km`;
+      }
+    }
+
+    function showScoreboardFinal() {
+      gameState = "scoreboard";
+      document.getElementById("finalTime").textContent = formatTime(timer);
+      document.getElementById("scoreboard").classList.remove("hidden");
+    }
+
+    function saveScoreboard() {
+      localStorage.setItem("scoreboardRecords", JSON.stringify(scoreboardRecords)); // Salva i record nella memoria locale
+    }
+
+    document.getElementById("homeButtonInGame").addEventListener("click", () => {
+      // Resetta tutte le impostazioni e ricarica la pagina
+      location.reload();
+    });
+
+    document.getElementById("homeButton").addEventListener("click", () => {
+      // Torna alla home resettando tutto
+      localStorage.removeItem("scoreboardRecords"); // Rimuovi i record salvati
+      location.reload();
+    });
+
+    document.getElementById("startButton").addEventListener("click", () => {
+      // Verifica che trackPoints e altKeyPoints siano disponibili
+      if (!window.trackPoints || !window.altKeyPoints || window.trackPoints.length === 0 || window.altKeyPoints.length === 0) {
+        console.error("Errore: trackPoints o altKeyPoints non sono disponibili. Controlla il file data.js.");
+        alert("Errore nei dati di gioco. Ricarica la pagina.");
+        return;
+      }
+
+      console.log("Dati caricati correttamente:", window.trackPoints.length, "trackPoints,", window.altKeyPoints.length, "altKeyPoints");
+
+      gender = document.querySelector("input[name='gender']:checked").value;
+      shirtColor = document.getElementById("shirtColor").value;
+
+      const genderText = gender === "male" ? "Maschile" : "Femminile";
+      const genderImageSrc = gender === "male" ? "assets/uomo.png" : "assets/donna.png";
+      document.getElementById("genderText").textContent = genderText;
+      document.getElementById("genderImage").src = genderImageSrc;
+
+      // Cambia le sprite in base al colore selezionato
+      if (shirtColor === "blue") {
+        sprites[0].src = 'assets/sprite1runn.jpg';
+        sprites[1].src = 'assets/sprite2runn.jpg';
+      } else if (shirtColor === "yellow-blue") {
+        sprites[0].src = 'assets/sprite1brig.jpg';
+        sprites[1].src = 'assets/sprite2brig.jpg';
+      } else if (shirtColor === "white-green") {
+        sprites[0].src = 'assets/sprite1green.jpg';
+        sprites[1].src = 'assets/sprite2green.jpg';
+      } else {
+        sprites[0].src = 'assets/sprite1red.jpg'; // Default
+        sprites[1].src = 'assets/sprite2red.jpg';
+      }
+
+      // Nascondi il menu e mostra il canvas
+      document.getElementById("menu").classList.add("hidden");
+      document.getElementById("inGameUI").classList.remove("hidden");
+      canvas.style.display = "block";
+
+      // Mostra il messaggio con le istruzioni
+      const gameMessage = document.getElementById("gameMessage");
+      gameMessage.textContent = "Completa L'Alba dei Marsi nel minor tempo possibile ...occhio alle salite!";
+      gameMessage.style.display = "block";
+
+      setTimeout(() => {
+        // Cambia il messaggio a "VIA!!"
+        gameMessage.textContent = "VIA!!";
+        setTimeout(() => {
+          gameMessage.style.display = "none"; // Nascondi il messaggio
+          // Avvia il gioco
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          gameState = "playing";
+          progress = 0;
+          speed = 0;
+          energy = 100;
+          timer = 0;
+          raceFinished = false;
+          lastTime = null;
+          lastInputTime = 0; // Azzera il tempo dell'ultimo input
+          requestAnimationFrame(gameLoop);
+        }, 500); // Durata del messaggio "VIA!!"
+      }, 3000); // Durata del messaggio con le istruzioni aumentata di 1 secondo
+    });
+
+    // Aggiorna le dimensioni del canvas quando la finestra viene ridimensionata
+    window.addEventListener("resize", () => {
+      if (gameState === "playing") {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+    });
+
+    document.getElementById("submitScore").addEventListener("click", () => {
+      const initials = document.getElementById("initials").value.trim().toUpperCase();
+      if (initials.length > 0) {
+        scoreboardRecords.push({ initials, time: timer, gender, shirtColor }); // Salva anche il colore della squadra
+        scoreboardRecords.sort((a, b) => a.time - b.time); // Ordina per tempo
+        showLeaderboard();
+      }
+    });
+
+    function showLeaderboard() {
+      const leaderboard = document.getElementById("leaderboard");
+      const leaderboardTable = document.getElementById("leaderboardTable").querySelector("tbody");
+      leaderboardTable.innerHTML = ""; // Pulisci la tabella
+
+      scoreboardRecords.forEach((record, index) => {
+        const row = document.createElement("tr");
+        const genderImageSrc = record.gender === "male" ? "assets/uomo.png" : "assets/donna.png";
+        const teamColorStyle = getTeamColorStyle(record.shirtColor); // Ottieni lo stile del colore della squadra
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${record.initials}</td>
+          <td>${formatTime(record.time)}</td>
+          <td>
+            <img src="${genderImageSrc}" alt="${record.gender}" style="width: 20px; height: 20px; vertical-align: middle;">
+          </td>
+          <td>
+            <span style="display: inline-block; width: 20px; height: 20px; ${teamColorStyle}; vertical-align: middle;">█</span>
+          </td>
+        `;
+        leaderboardTable.appendChild(row);
+      });
+
+      saveScoreboard(); // Salva i record aggiornati
+      document.getElementById("scoreboard").classList.add("hidden");
+      leaderboard.classList.remove("hidden");
+    }
+
+    function getTeamColorStyle(color) {
+      switch (color) {
+        case "red":
+          return "background-color: #ff0000; color: #ff0000;";
+        case "blue":
+          return "background-color: #0000ff; color: #0000ff;";
+        case "yellow-blue":
+          return "background: linear-gradient(to right, #ffff00 50%, #0000ff 50%);";
+        case "white-green":
+          return "background: linear-gradient(to right, #ffffff 50%, #00ff00 50%);";
+        default:
+          return "background-color: #888888; color: #888888;";
+      }
+    }
+
+    document.getElementById("newGameButton").addEventListener("click", () => {
+      // Inizia una nuova partita con le stesse selezioni
+      document.getElementById("leaderboard").classList.add("hidden");
+      document.getElementById("menu").classList.add("hidden");
+      document.getElementById("inGameUI").classList.remove("hidden");
+      canvas.style.display = "block";
+
+      // Reinizializza le variabili di gioco
+      gameState = "playing";
+      progress = 0;
+      speed = 0;
+      energy = 100;
+      timer = 0;
+      raceFinished = false;
+      lastTime = null;
+      lastInputTime = 0;
+
+      requestAnimationFrame(gameLoop);
+    });
+
+    document.getElementById("viewScores").addEventListener("click", () => {
+      document.getElementById("menu").classList.add("hidden");
+      document.getElementById("leaderboard").classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
